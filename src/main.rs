@@ -5,7 +5,7 @@ use std::io::Write;
 mod utils;
 
 fn main() {
-    let version = "0.1.1";
+    let version = "0.1.2";
     println!("IPass v{}\n", version);
 
     let args = utils::get_args();
@@ -35,7 +35,7 @@ fn version_help(version: &str) {
     let mut data = version.split(".");
     print!("Major {} ", data.next().unwrap());
     print!("Sub {} ", data.next().unwrap());
-    print!("Bugfix {}", data.next().unwrap());
+    println!("Bugfix {}", data.next().unwrap());
 }
 
 fn help_message(args: &Vec<String>) {
@@ -96,9 +96,17 @@ fn help_message(args: &Vec<String>) {
 
 fn list() {
     let paths = std::fs::read_dir(utils::get_ipass_folder()).unwrap();
+    
+    let mut has_entry:bool = false;
 
     for path in paths {
+        has_entry = true;
         println!("Entry: \"{}\"", path.unwrap().file_name().into_string().unwrap().replace(".ipass", ""));
+    }
+    
+    if !has_entry {
+        println!("No entries yet!");
+        return;
     }
 }
 
@@ -121,7 +129,6 @@ fn add(args: &Vec<String>) {
         let mut chars = String::new();
 
         for index in chars_index {
-            // println!("index: {index} : {}",(index%((alphabet.len()-1) as u8)));
             chars += &char_set[(index%((alphabet.len()-1) as u8)) as usize].to_string();
         }
 
@@ -199,7 +206,7 @@ fn remove(args: &Vec<String>) {
     let name = &args[2];
     let filepath = &(utils::get_ipass_folder()+name+".ipass");
     if std::path::Path::new(filepath).exists() {
-    if utils::prompt_answer(format!("Are you sure you want to delete {}? [y/N]", name)) == "y" {
+    if utils::prompt_answer(format!("Are you sure you want to delete {}? [y/N] ", name)) == "y" {
         std::fs::remove_file(filepath).unwrap();
         println!("Removed entry \"{}\"", name);
     } else {
@@ -235,7 +242,7 @@ fn import(args: &Vec<String>) {
             file.write_all(i.as_bytes()).unwrap();
             name = "";
         }
-        print!("Imported all entries!");
+        println!("Imported all entries!");
     } else {
         println!("No such file found!");
     }
@@ -264,8 +271,12 @@ fn export(args: &Vec<String>) { //TODO: compress data
         }
     }
 
-    let mut file = std::fs::File::create(location.clone()+"/export.ipassx").unwrap();
-    file.write_all(collected_data.as_bytes()).unwrap();
+    if let Ok(mut file) = std::fs::File::create(location.clone()+"/export.ipassx") {
+        file.write_all(collected_data.as_bytes()).unwrap();
 
-    println!("Saved at: {}/export.ipassx", location);
+        println!("Saved at: '{}/export.ipassx'", location);
+    } else {
+        println!("Failed saving at '{}/export.ipassx' does it exist?",location)
+    }
+    
 }
