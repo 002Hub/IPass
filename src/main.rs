@@ -5,7 +5,7 @@ use std::io::Write;
 mod utils;
 
 fn main() {
-    let version = "0.1.0";
+    let version = "0.1.1";
     println!("IPass v{}\n", version);
 
     let args = utils::get_args();
@@ -26,8 +26,16 @@ fn main() {
         "import" => import(&args),
         "export" => export(&args),
         "rename" => rename(&args),
+        "version" => version_help(version),
         _ => help_message(&args),
     }
+}
+
+fn version_help(version: &str) {
+    let mut data = version.split(".");
+    print!("Major {} ", data.next().unwrap());
+    print!("Sub {} ", data.next().unwrap());
+    print!("Bugfix {}", data.next().unwrap());
 }
 
 fn help_message(args: &Vec<String>) {
@@ -61,6 +69,19 @@ fn help_message(args: &Vec<String>) {
         "rename".to_string(),
         "renames an existing entry".to_string(),
     );
+    help_messages.insert(
+        "import".to_string(),
+        "import a .ipassx file to your current entries from an optional {directory}".to_string(),
+    );
+    help_messages.insert(
+        "export".to_string(),
+        "exports your current entries as an .ipassx file to an optional {directory}".to_string(),
+    );
+    help_messages.insert(
+        "version".to_string(),
+        "explains the current version".to_string()
+    );
+
 
     if args.len() < 3 {
         println!("You can use the following commands:");
@@ -82,6 +103,7 @@ fn list() {
 }
 
 fn add(args: &Vec<String>) {
+
     if args.len() < 3 || args.len() > 4 {
         println!("Incorrect usage of \"add\"");
         return;
@@ -92,13 +114,15 @@ fn add(args: &Vec<String>) {
     if args.len() > 3 {
         pw = args[3].to_owned();
     } else {
-        let char_set = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!\"§$%&/()=?´`²³{[]}\\,.-;:_><|+*#'".as_bytes();
+        let alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!\"§$%&/()=?´`²³{[]}\\,.-;:_><|+*#'";
+        let char_set:Vec<char> = alphabet.clone().chars().collect();
         let mut chars_index: Vec<u8> = vec![0;20];
         OsRng.fill_bytes(&mut chars_index);
         let mut chars = String::new();
 
         for index in chars_index {
-            chars += std::str::from_utf8(&[char_set[(index%(char_set.len() as u8)) as usize]]).unwrap();
+            // println!("index: {index} : {}",(index%((alphabet.len()-1) as u8)));
+            chars += &char_set[(index%((alphabet.len()-1) as u8)) as usize].to_string();
         }
 
         pw = chars;
@@ -115,6 +139,10 @@ fn add(args: &Vec<String>) {
 }
 
 fn get(args: &Vec<String>) {
+    if args.len() < 3 {
+        println!("Invalid usage of \"get\"");
+        return;
+    }
     let name = &args[2];
     let filepath = &(utils::get_ipass_folder()+name+".ipass");
     if std::path::Path::new(filepath).exists() {
@@ -164,13 +192,17 @@ fn rename(args: &Vec<String>) { // prog ren old new
 }
 
 fn remove(args: &Vec<String>) {
+    if args.len() < 3 {
+        println!("Invalid usage of \"remove\"");
+        return;
+    }
     let name = &args[2];
     let filepath = &(utils::get_ipass_folder()+name+".ipass");
     if std::path::Path::new(filepath).exists() {
     if utils::prompt_answer(format!("Are you sure you want to delete {}? [y/N]", name)) == "y" {
         std::fs::remove_file(filepath).unwrap();
         println!("Removed entry \"{}\"", name);
-    } else{
+    } else {
         println!("Operation cancelled!")
     }
     } else {
