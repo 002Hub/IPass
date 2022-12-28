@@ -5,7 +5,7 @@ use std::io::Write;
 mod utils;
 
 fn main() {
-    let version = "0.1.2";
+    let version = "0.2.0";
     println!("IPass v{}\n", version);
 
     let args = utils::get_args();
@@ -117,10 +117,10 @@ fn add(args: &Vec<String>) {
         return;
     }
 
-    let mut pw: String;
+    let pw: String;
 
     if args.len() > 3 {
-        pw = args[3].to_owned();
+        pw = args[3].trim().to_owned();
     } else {
         let alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!\"§$%&/()=?´`²³{[]}\\,.-;:_><|+*#'";
         let char_set:Vec<char> = alphabet.clone().chars().collect();
@@ -137,7 +137,7 @@ fn add(args: &Vec<String>) {
     }
 
     println!("Adding password for {}",args[2]);
-    let succeeded = utils::create_entry(&args[2],&mut pw);
+    let succeeded = utils::create_entry(&args[2], pw);
     if !succeeded {
         println!("You already have an entry with that name! Did you mean to use \"edit\"?");
         return;
@@ -154,7 +154,7 @@ fn get(args: &Vec<String>) {
     let filepath = &(utils::get_ipass_folder()+name+".ipass");
     if std::path::Path::new(filepath).exists() {
         println!("Getting entry");
-        println!("{}",utils::get_entry(filepath));
+        println!("{}",utils::get_entry(name));
     } else {
         println!("No such entry!");
         return;
