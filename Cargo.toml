@@ -1,6 +1,6 @@
 [package]
 name = "ipass"
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -12,3 +12,4 @@ rand = "0.8.5"
 aes-gcm = "0.10.1"
 sha2 = "0.10.6"
 hex = "0.4.3"
+brotli = "3.3.4"

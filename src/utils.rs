@@ -10,15 +10,23 @@ pub fn get_args() -> Vec<String> {
 }
 
 fn vecu8_to_string(vec: Vec<u8>) -> String {
+    let mut do_print_warning = false;
     let mut out: String = String::new();
     for ind in vec {
         if let Ok(a) = std::str::from_utf8(&[ind]) {
             out += a;
         } else {
-            panic!("malformed character");
+            do_print_warning = true;
+            eprintln!("[WARNING] malformed character {}",ind);
+            let mut temp_vec: Vec<u8> = Vec::new();
+            temp_vec.insert(0,ind%128);
+            out += vecu8_to_string(temp_vec).as_str();
         }
     }
-    return out
+    if do_print_warning {
+        println!("[WARNING] Output may be corrupt");
+    }
+    return out;
 }
 
 fn encrypt_pass(nonce_arg:String, pass: String,mpw: String) -> String {
@@ -29,13 +37,20 @@ fn encrypt_pass(nonce_arg:String, pass: String,mpw: String) -> String {
     if nonce_arg.len() > 12 {
         nonce_argument = nonce_arg[0..12].to_string();
     }
+
+    let mut nonce_hasher = Sha256::new();
+    nonce_hasher.update(nonce_argument.as_bytes());
+
+    let nonce_final = &nonce_hasher.finalize()[0..12];
+
+
     let mut hasher = Sha256::new();
     hasher.update(mpw.as_bytes());
 
     let master_pw = &hasher.finalize();
 
     let cipher = Aes256Gcm::new(master_pw);
-    let nonce = Nonce::from_slice(nonce_argument.as_bytes()); // 96-bits; unique per message
+    let nonce = Nonce::from_slice(nonce_final); // 96-bits; unique per message
     let ciphertext = cipher.encrypt(nonce, pass.as_ref()).unwrap();
     return hex::encode(ciphertext);
 }
@@ -48,15 +63,29 @@ fn decrypt_pass(nonce_arg:String, pass: Vec<u8>,mpw: String) -> String {
     if nonce_arg.len() > 12 {
         nonce_argument = nonce_arg[0..12].to_string();
     }
+
+    let mut nonce_hasher = Sha256::new();
+    nonce_hasher.update(nonce_argument.as_bytes());
+
+    let nonce_final = &nonce_hasher.finalize()[0..12];
+
     let mut hasher = Sha256::new();
     hasher.update(mpw.as_bytes());
 
     let master_pw = &hasher.finalize();
     let cipher = Aes256Gcm::new(master_pw);
-    let nonce = Nonce::from_slice(nonce_argument.as_bytes()); // 96-bits; unique per message
+    let nonce = Nonce::from_slice(nonce_final); // 96-bits; unique per message
 
-    let plaintext = cipher.decrypt(nonce, pass.as_ref()).unwrap();
-    return vecu8_to_string(plaintext);
+    let plaintext = cipher.decrypt(nonce, pass.as_ref());
+    match plaintext {
+        Ok(res) => {
+            return vecu8_to_string(res);
+        }
+        Err(_) => {
+            eprintln!("[ERROR] Error decrypting data, check your master password");
+            std::process::exit(1);
+        }
+    }
 }
 
 pub fn get_home_folder_str() -> String {
@@ -82,21 +111,46 @@ pub fn create_entry(name: &String, pw: String) -> bool {
     if std::path::Path::new(&(get_ipass_folder()+name+".ipass")).exists() {
         return false;
     }
-    edit_entry(name, pw);
+    let mpw = ask_for_pw();
+    // println!("{pw}");
+    let pw = encrypt_pass(name.to_owned(), pw,mpw);
+    let mut file = std::fs::File::create(get_ipass_folder()+name+".ipass").unwrap();
+    file.write_all(pw.as_bytes()).unwrap();
     return true;
 }
 
-pub fn get_entry(name:&String) -> String {
+fn read_entry(name:&String,mpw:String) -> String {
     let content = &mut std::fs::read_to_string(get_ipass_folder()+name+".ipass").expect("Should have been able to read the file");
-    let mpw = ask_for_pw();
     return decrypt_pass(name.to_owned(),hex::decode(content).unwrap(),mpw).to_owned();
 }
 
-pub fn edit_entry(name:&String,mut pw:String) {
+pub fn get_entry(name:&String) -> String {
     let mpw = ask_for_pw();
-    pw = encrypt_pass(name.to_owned(), pw,mpw);
+    return read_entry(name,mpw);
+}
+
+pub fn edit_password(name:&String, password:String) {
+    let mpw = ask_for_pw();
+    let entry = read_entry(name, mpw.clone());
+    // println!("entry: {entry}");
+    let mut parts = entry.split(";");
+    let username = parts.next().unwrap().to_string();
+    let _old_password = parts.next().unwrap();
+    let data = encrypt_pass(name.to_owned(), username+";"+password.as_str(),mpw);
     let mut file = std::fs::File::create(get_ipass_folder()+name+".ipass").unwrap();
-    file.write_all(pw.as_bytes()).unwrap();
+    file.write_all(data.as_bytes()).unwrap();
+}
+
+pub fn edit_username(name:&String, username: String) {
+    let mpw = ask_for_pw();
+    let entry = read_entry(name, mpw.clone());
+    // println!("entry: {entry}");
+    let mut parts = entry.split(";");
+    let _old_username = parts.next().unwrap();
+    let password = parts.next().unwrap();
+    let data = encrypt_pass(name.to_owned(), username+";"+password,mpw);
+    let mut file = std::fs::File::create(get_ipass_folder()+name+".ipass").unwrap();
+    file.write_all(data.as_bytes()).unwrap();
 }
 
 fn ask_for_pw() -> String {
