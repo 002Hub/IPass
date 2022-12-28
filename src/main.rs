@@ -5,7 +5,7 @@ use std::io::Write;
 mod utils;
 
 fn main() {
-    let version = "0.2.0";
+    let version = "0.2.1";
     println!("IPass v{}\n", version);
 
     let args = utils::get_args();
@@ -110,7 +110,7 @@ fn list() {
     }
 }
 
-fn add(args: &Vec<String>) {
+fn add(args: &Vec<String>) { //TODO: format: [specifier] [email or username] {password}
 
     if args.len() < 3 || args.len() > 4 {
         println!("Incorrect usage of \"add\"");
@@ -123,16 +123,20 @@ fn add(args: &Vec<String>) {
         pw = args[3].trim().to_owned();
     } else {
         let alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!\"§$%&/()=?´`²³{[]}\\,.-;:_><|+*#'";
-        let char_set:Vec<char> = alphabet.clone().chars().collect();
+        let alph_len = alphabet.chars().count();
+        let char_set:Vec<char> = alphabet.chars().collect();
         let mut chars_index: Vec<u8> = vec![0;20];
         OsRng.fill_bytes(&mut chars_index);
         let mut chars = String::new();
 
         for index in chars_index {
-            chars += &char_set[(index%((alphabet.len()-1) as u8)) as usize].to_string();
+            // println!("{} - {} - {}",index,(index as usize)%(alph_len-1),alph_len);
+            chars += &char_set[(index as usize)%(alph_len-1)].to_string();
         }
-
         pw = chars;
+
+        println!("Using auto generated password");
+        // println!("pw: {pw}");
         
     }
 
@@ -191,7 +195,7 @@ fn rename(args: &Vec<String>) { // prog ren old new
     }
     let filepath = &(utils::get_ipass_folder()+&args[2]+".ipass");
     if std::path::Path::new(filepath).exists() {
-        std::fs::rename(format!("{}/{}.ipass",utils::get_ipass_folder(),args[2]), format!("{}/{}.ipass",utils::get_ipass_folder(),args[3])).unwrap();
+        utils::rename(&args[2],&args[3]);
         println!("Renamed {} to {}", args[2], args[3]);
     } else {
         println!("No such file");

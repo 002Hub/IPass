@@ -112,3 +112,19 @@ pub fn prompt_answer(toprint: String) -> String {
 
     return choice.trim().to_lowercase();
 }
+
+pub fn rename(name: &String, new_name: &String) {
+    if !std::path::Path::new(&(get_ipass_folder()+name+".ipass")).exists() {
+        return;
+    }
+    if std::path::Path::new(&(get_ipass_folder()+new_name+".ipass")).exists() {
+        return;
+    }
+    let content = &mut std::fs::read_to_string(get_ipass_folder()+name+".ipass").expect("Should have been able to read the file");
+    let mpw = ask_for_pw();
+    let mut pw = decrypt_pass(name.to_owned(),hex::decode(content).unwrap(),mpw.clone()).to_owned();
+
+    pw = encrypt_pass(new_name.to_owned(), pw,mpw);
+    let mut file = std::fs::File::create(get_ipass_folder()+new_name+".ipass").unwrap();
+    file.write_all(pw.as_bytes()).unwrap();
+}
