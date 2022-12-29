@@ -311,7 +311,7 @@ fn import(args: &Vec<String>) {
 
 }
 
-fn export(args: &Vec<String>) { //TODO: compress data
+fn export(args: &Vec<String>) {
     let mut location = utils::get_home_folder_str();
     if args.len() == 3 {
         location = args[2].clone();
