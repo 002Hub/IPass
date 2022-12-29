@@ -1,6 +1,6 @@
 # IPass
 
-![IPass logo](../blob/master/IPass_logo.png?raw=true)
+![IPass logo](../master/IPass_logo.png?raw=true)
 
 ## Secure your passwords, secure your life, with IPass.
 

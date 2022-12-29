@@ -104,9 +104,13 @@ fn help_message(args: &Vec<String>) {
 }
 
 fn list() {
-    let paths = std::fs::read_dir(utils::get_ipass_folder()).unwrap();
+    let mut paths = std::fs::read_dir(utils::get_ipass_folder()).unwrap();
     
     let mut has_entry:bool = false;
+
+    println!("Total entries: {}\n", paths.count());
+
+    paths = std::fs::read_dir(utils::get_ipass_folder()).unwrap();
 
     for path in paths {
         has_entry = true;
