@@ -1,8 +1,7 @@
 use std::collections::HashMap;
+use std::io::{Read, Write};
 use rand::rngs::OsRng;
 use rand::RngCore;
-use std::io::Write;
-use std::io::Read;
 mod utils;
 
 fn main() {
