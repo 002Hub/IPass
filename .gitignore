@@ -2,3 +2,5 @@
 comp.bat
 comp.sh
 report.json
+*.ipass
+*.ipassx

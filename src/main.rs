@@ -1,5 +1,10 @@
+#![warn(missing_docs, single_use_lifetimes, unused_lifetimes, trivial_casts, trivial_numeric_casts)]
+#![forbid(unsafe_code)]
+
+//! IPass Password Manager
+
 use std::collections::HashMap;
-use std::io::{Read, Write};
+use std::io::Write;
 use rand::rngs::OsRng;
 use rand::RngCore;
 mod utils;
@@ -16,6 +21,19 @@ fn main() {
     }
 
     let mode: &str = &args[1].trim().to_lowercase().to_owned();
+
+    let sync_file_loc = utils::get_home_folder_str()+"/.sync.ipass";
+    let sync_file_path = std::path::Path::new(&sync_file_loc);
+
+    let sync_enabled = sync_file_path.clone().exists();
+    let sync_loc: String;
+
+    if sync_enabled {
+        sync_loc = std::fs::read_to_string(sync_file_path).expect("Should have been able to read the sync file");
+        utils::import_file(&sync_loc);
+    } else {
+        sync_loc = "".to_string(); //sync is disabled, no location needed
+    }
     
     match mode {
         "list" => list(),
@@ -28,8 +46,13 @@ fn main() {
         "export" => export(&args),
         "rename" => rename(&args),
         "version" => version_help(version),
+        "sync" => sync(&args),
+        "isync" => isync(&args),
         "clear" => clear(),
         _ => help_message(&args),
+    }
+    if sync_enabled {
+        utils::export_file(&sync_loc);
     }
 }
 
@@ -90,6 +113,14 @@ fn help_message(args: &Vec<String>) {
         "clear".to_string(),
         "clears all entries".to_string(),
     );
+    help_messages.insert(
+        "sync".to_string(),
+        "automatically sync your data with a specified file".to_string(),
+    );
+    help_messages.insert(
+        "isync".to_string(),
+        "not fully implemented yet; ignore this for now  | Syncs the database to IPass servers".to_string(),
+    );
 
     if args.len() < 3 {
         println!("You can use the following commands:");
@@ -103,7 +134,7 @@ fn help_message(args: &Vec<String>) {
 }
 
 fn list() {
-    let mut paths = std::fs::read_dir(utils::get_ipass_folder()).unwrap();
+    let mut paths: std::fs::ReadDir = std::fs::read_dir(utils::get_ipass_folder()).unwrap();
     
     let mut has_entry:bool = false;
 
@@ -123,6 +154,7 @@ fn list() {
 }
 
 fn add(args: &Vec<String>) {
+    //! arguments: program add [name] {password}
 
     if args.len() < 4 || args.len() > 5 {
         println!("Incorrect usage of \"add\"");
@@ -135,12 +167,12 @@ fn add(args: &Vec<String>) {
     if args.len() > 4 {
         pw = username+";"+args[4].trim();
     } else {
-        let alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!\"$%&/()=?{[]}\\,.-;:_><|+*#'";
-        let alph_len = alphabet.chars().count();
+        let alphabet: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!\"$%&/()=?{[]}\\,.-;:_><|+*#'";
+        let alph_len: usize = alphabet.chars().count();
         let char_set:Vec<char> = alphabet.chars().collect();
         let mut chars_index: Vec<u8> = vec![0;20];
         OsRng.fill_bytes(&mut chars_index);
-        let mut chars = String::new();
+        let mut chars: String = String::new();
 
         for index in chars_index {
             // println!("{} - {} - {}",index,(index as usize)%(alph_len-1),alph_len);
@@ -154,7 +186,7 @@ fn add(args: &Vec<String>) {
     }
 
     println!("Adding password for {}",args[2]);
-    let succeeded = utils::create_entry(&args[2], pw);
+    let succeeded: bool = utils::create_entry(&args[2], pw);
     if !succeeded {
         println!("You already have an entry with that name! Did you mean to use \"edit\"?");
         return;
@@ -163,15 +195,16 @@ fn add(args: &Vec<String>) {
 }
 
 fn get(args: &Vec<String>) {
+    //! arguments: program get [name]
     if args.len() < 3 {
         println!("Invalid usage of \"get\"");
         return;
     }
-    let name = &args[2];
+    let name: &String = &args[2];
     let filepath = &(utils::get_ipass_folder()+name+".ipass");
     if std::path::Path::new(filepath).exists() {
         println!("Getting entry");
-        let entry = utils::get_entry(name);
+        let entry: String = utils::get_entry(name);
         let mut data = entry.split(";");
         println!("Username: '{}' Password: '{}'",data.next().unwrap(),data.next().unwrap());
     } else {
@@ -180,7 +213,8 @@ fn get(args: &Vec<String>) {
     }
 }
 
-fn changepw(args: &Vec<String>) { //rename func to changepw
+fn changepw(args: &Vec<String>) { 
+    //! arguments: program changepw [name] {new_password}
     if args.len() < 3 {
         println!("Invalid usage of \"changepw\"");
         return;
@@ -203,6 +237,7 @@ fn changepw(args: &Vec<String>) { //rename func to changepw
 }
 
 fn changeuser(args: &Vec<String>) {
+    //! arguments: program changeuser [name] {new_username}
     if args.len() < 3 {
         println!("Invalid usage of \"changeuser\"");
         return;
@@ -224,7 +259,8 @@ fn changeuser(args: &Vec<String>) {
     }
 }
 
-fn rename(args: &Vec<String>) { // prog ren old new
+fn rename(args: &Vec<String>) {
+    //! arguments: program rename [name] [new_name]
     if args.len() < 4 {
         println!("Invalid usage of \"rename\"");
         return;
@@ -239,6 +275,7 @@ fn rename(args: &Vec<String>) { // prog ren old new
 }
 
 fn remove(args: &Vec<String>) {
+    //! arguments: program remove [name]
     if args.len() < 3 {
         println!("Invalid usage of \"remove\"");
         return;
@@ -259,6 +296,7 @@ fn remove(args: &Vec<String>) {
 }
 
 fn import(args: &Vec<String>) {
+    //! arguments: program import {location}
     let mut location = utils::get_home_folder_str();
     if args.len() == 3 {
         location = args[2].clone();
@@ -268,42 +306,7 @@ fn import(args: &Vec<String>) {
             return;
         }
     }
-    if std::path::Path::new(&(location.clone()+"/export.ipassx")).exists() {
-        let mut reader = brotli::Decompressor::new(
-            std::fs::File::open(location.clone()+"/export.ipassx").unwrap(),
-            4096, // buffer size
-        );
-        let mut content: String = String::new();
-        let mut buf = [0u8; 4096];
-        loop {
-            match reader.read(&mut buf[..]) {
-                Err(e) => {
-                    if let std::io::ErrorKind::Interrupted = e.kind() {
-                        continue;
-                    }
-                    panic!("{}", e);
-                }
-                Ok(size) => {
-                    if size == 0 {
-                        break;
-                    }
-                    content += &std::str::from_utf8(&buf[..size]).unwrap();
-                }
-            }
-        }
-
-        let lines = content.lines();
-        let mut name = "";
-        for i in lines {
-            if name == "" {
-                name = i;
-                continue;
-            }
-
-            let mut file = std::fs::File::create(format!("{}/{}.ipass",utils::get_ipass_folder(), name)).unwrap();
-            file.write_all(i.as_bytes()).unwrap();
-            name = "";
-        }
+    if utils::import_file(&location) {
         println!("Imported all entries!");
     } else {
         println!("No such file found!");
@@ -312,6 +315,7 @@ fn import(args: &Vec<String>) {
 }
 
 fn export(args: &Vec<String>) {
+    //! arguments: program export {location}
     let mut location = utils::get_home_folder_str();
     if args.len() == 3 {
         location = args[2].clone();
@@ -321,37 +325,11 @@ fn export(args: &Vec<String>) {
             return;
         }
     }
-
-    let mut collected_data: String = String::new();
-
-    let paths = std::fs::read_dir(utils::get_ipass_folder()).unwrap();
-
-    for p in paths {
-        if let Ok(path) = p {
-            let content = &mut std::fs::read_to_string(utils::get_ipass_folder()+&path.file_name().into_string().unwrap()).expect("Should have been able to read the file");
-            collected_data += format!("{}\n{}\n", path.file_name().into_string().unwrap().replace(".ipass", ""),content).as_str();
-        }
-    }
-
-    
-
-    if let Ok(file) = std::fs::File::create(location.clone()+"/export.ipassx") {
-        let mut writer = brotli::CompressorWriter::new(
-            file,
-            4096,
-            11,
-            22);
-        
-        match writer.write_all(collected_data.as_bytes()) {
-            Err(e) => panic!("{}", e),
-            Ok(_) => {},
-        }
-
+    if utils::export_file(&location) {
         println!("Saved at: '{}/export.ipassx'", location);
     } else {
-        println!("Failed saving at '{}/export.ipassx' does it exist?",location)
+        println!("Failed saving at '{}/export.ipassx' does it exist?",location);
     }
-    
 }
 
 fn clear() {
@@ -368,4 +346,83 @@ fn clear() {
         }
     }
     println!("Cleared all entries!");
+}
+
+fn sync(args: &Vec<String>) { 
+    //! arguments: program sync [on/off] {location if on}
+    let arg: String;
+    if args.len() < 3 {
+        println!("Invalid usage of \"sync\"");
+        return;
+    } else {
+        arg = args[2].to_lowercase();
+    }
+
+    match arg.as_str() {
+        "on" => {
+            let location: String;
+
+            if args.len() < 4 {
+                location = utils::prompt_answer("No location specified, please provide the location of the file you want to sync: ".to_string());
+            } else {
+                location = args[3].clone();
+            }
+
+            let mut sync_file = std::fs::File::create(utils::get_home_folder_str()+"/.sync.ipass").expect("could not open sync file");
+            sync_file.write(location.as_bytes()).expect("could not write to sync file");
+
+            if !utils::export_file(&location) {
+                eprintln!("Test sync error, make sure you specified a valid folder!");
+            } else {
+                println!("Sync is now Enabled!");
+                println!("Sync file: {}",location);
+            }
+
+            
+
+            
+        },
+        "off" => {
+
+            let sync_file_loc = utils::get_home_folder_str()+"/.sync.ipass";
+            let sync_file_path = std::path::Path::new(&sync_file_loc);
+
+            let sync_enabled = sync_file_path.clone().exists();
+
+            if sync_enabled {
+
+                std::fs::remove_file(utils::get_home_folder_str()+"/.sync.ipass").expect("could not disable sync, is it already disabled?");
+
+                println!("Sync is now Disabled!");
+            } else {
+                println!("Sync is already disabled!");
+            }
+        },
+        _ => {
+            println!("Invalid argument, check \"help\" for help");
+        }
+    }
+}
+
+fn isync(args: &Vec<String>) { 
+    //! arguments: program isync [on/off]
+    if args.len() > 2 {
+        println!("Invalid usage of \"isync\"");
+        return;
+    }
+    let arg: String = args[2].clone().to_lowercase();
+
+    match arg.as_str() {
+        "on" => {
+            todo!("ISync");
+
+            // println!("ISync is now Enabled!");
+        },
+        "off" => {
+            println!("ISync is now Disabled!");
+        },
+        _ => {
+            println!("Invalid argument, check \"help\" for help");
+        }
+    }
 }

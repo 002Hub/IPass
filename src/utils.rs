@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{Read, Write};
 use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Nonce
@@ -7,6 +7,79 @@ use sha2::{Sha256, Digest};
 
 pub fn get_args() -> Vec<String> {
     std::env::args().collect() // [0] = file path; [n>0] = argument
+}
+
+pub fn import_file(location:&String) -> bool {
+    if std::path::Path::new(&(location.clone()+"/export.ipassx")).exists() {
+        let mut reader = brotli::Decompressor::new(
+            std::fs::File::open(location.clone()+"/export.ipassx").unwrap(),
+            4096, // buffer size
+        );
+        let mut content: String = String::new();
+        let mut buf = [0u8; 4096];
+        loop {
+            match reader.read(&mut buf[..]) {
+                Err(e) => {
+                    if let std::io::ErrorKind::Interrupted = e.kind() {
+                        continue;
+                    }
+                    panic!("{}", e);
+                }
+                Ok(size) => {
+                    if size == 0 {
+                        break;
+                    }
+                    content += &std::str::from_utf8(&buf[..size]).unwrap();
+                }
+            }
+        }
+
+        let lines = content.lines();
+        let mut name = "";
+        for i in lines {
+            if name == "" {
+                name = i;
+                continue;
+            }
+
+            let mut file = std::fs::File::create(format!("{}/{}.ipass",get_ipass_folder(), name)).unwrap();
+            file.write_all(i.as_bytes()).unwrap();
+            name = "";
+        }
+        return true;
+    } else {
+        return false;
+    }
+}
+
+pub fn export_file(location:&String) -> bool {
+    let mut collected_data: String = String::new();
+
+    let paths = std::fs::read_dir(get_ipass_folder()).unwrap();
+
+    for p in paths {
+        if let Ok(path) = p {
+            let content = &mut std::fs::read_to_string(get_ipass_folder()+&path.file_name().into_string().unwrap()).expect("Should have been able to read the file");
+            collected_data += format!("{}\n{}\n", path.file_name().into_string().unwrap().replace(".ipass", ""),content).as_str();
+        }
+    }
+
+    if let Ok(file) = std::fs::File::create(location.clone()+"/export.ipassx") {
+        let mut writer = brotli::CompressorWriter::new(
+            file,
+            4096,
+            11,
+            22);
+        
+        match writer.write_all(collected_data.as_bytes()) {
+            Err(e) => panic!("{}", e),
+            Ok(_) => {},
+        }
+
+        return true;
+    } else {
+        return false;
+    }
 }
 
 fn vecu8_to_string(vec: Vec<u8>) -> String {

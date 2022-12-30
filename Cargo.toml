@@ -1,6 +1,6 @@
 [package]
 name = "ipass"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -19,4 +19,4 @@ opt-level = 'z'     # Optimize for size
 lto = true          # Enable link-time optimization
 codegen-units = 1   # Reduce number of codegen units to increase optimizations
 panic = 'abort'     # Abort on panic
-strip = true        # Strip symbols from binary; remove pdb
+# strip = true        # Strip symbols from binary; remove pdb
