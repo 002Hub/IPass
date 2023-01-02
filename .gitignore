@@ -4,3 +4,4 @@ comp.sh
 report.json
 *.ipass
 *.ipassx
+library/*

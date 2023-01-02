@@ -1,3 +1,5 @@
 fn main() {
-    println!("cargo:rustc-link-arg=.res");
+    if std::env::consts::OS == "windows" {
+        println!("cargo:rustc-link-arg=.res");
+    }
 }
