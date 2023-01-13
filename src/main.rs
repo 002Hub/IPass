@@ -135,7 +135,11 @@ fn help_message(args: &Vec<String>) {
         return;
     }
 
-    println!("{} {}", &args[2], &help_messages[&args[2]])    
+    if help_messages.contains_key(&args[2]) {
+        println!("{} {}", &args[2], &help_messages[&args[2]]) 
+    } else {
+        println!("Unknown option {}",&args[2])
+    }
 }
 
 fn list() {
