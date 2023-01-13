@@ -56,6 +56,11 @@ fn main() {
     }
 }
 
+fn ask_for_pw() -> String {
+    let output = rpassword::prompt_password("Please enter the master password: ").unwrap();
+    return output.replace("\n", "").replace("\r","");
+}
+
 fn version_help(version: &str) {
     let mut data = version.split(".");
     print!("Major {} ", data.next().unwrap());
@@ -176,7 +181,7 @@ fn add(args: &Vec<String>) {
     }
 
     println!("Adding password for {}",args[2]);
-    let succeeded: bool = ip_lib::create_entry(&args[2], pw);
+    let succeeded: bool = ip_lib::create_entry(&args[2], pw, ask_for_pw());
     if !succeeded {
         println!("You already have an entry with that name! Did you mean to use \"edit\"?");
         return;
@@ -194,7 +199,7 @@ fn get(args: &Vec<String>) {
     let filepath = &(ip_lib::get_ipass_folder()+name+".ipass");
     if std::path::Path::new(filepath).exists() {
         println!("Getting entry");
-        let entry: String = ip_lib::get_entry(name);
+        let entry: String = ip_lib::get_entry(name, ask_for_pw());
         let mut data = entry.split(";");
         println!("Username: '{}' Password: '{}'",data.next().unwrap(),data.next().unwrap());
     } else {
@@ -218,7 +223,7 @@ fn changepw(args: &Vec<String>) {
             output = args[3].clone();
         }
         
-        ip_lib::edit_password(&args[2], output);
+        ip_lib::edit_password(&args[2], output, ask_for_pw());
 
         println!("Changed Password of {}!", args[2]);
     } else {
@@ -241,7 +246,7 @@ fn changeuser(args: &Vec<String>) {
             output = args[3].clone();
         }
         
-        ip_lib::edit_username(&args[2], output);
+        ip_lib::edit_username(&args[2], output, ask_for_pw());
 
         println!("Changed Username of {}!", args[2]);
     } else {
@@ -257,7 +262,7 @@ fn rename(args: &Vec<String>) {
     }
     let filepath = &(ip_lib::get_ipass_folder()+&args[2]+".ipass");
     if std::path::Path::new(filepath).exists() {
-        ip_lib::rename(&args[2],&args[3]);
+        ip_lib::rename(&args[2],&args[3], ask_for_pw());
         println!("Renamed {} to {}", args[2], args[3]);
     } else {
         println!("No such file");
