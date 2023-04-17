@@ -203,7 +203,7 @@ fn get(args: &Vec<String>) {
     let filepath = &(ip_lib::get_ipass_folder()+name+".ipass");
     if std::path::Path::new(filepath).exists() {
         println!("Getting entry");
-        let entry: String = ip_lib::get_entry(name, ask_for_pw());
+        let entry: String = ip_lib::get_entry(name, ask_for_pw()).expect("could not read entry!");
         let mut data = entry.split(";");
         println!("Username: '{}' Password: '{}'",data.next().unwrap(),data.next().unwrap());
     } else {
@@ -403,7 +403,7 @@ fn sync(args: &Vec<String>) {
     }
 }
 
-fn isync(args: &Vec<String>) { 
+fn isync(args: &Vec<String>) {
     //! arguments: program isync [on/off]
     if args.len() > 2 {
         println!("Invalid usage of \"isync\"");
