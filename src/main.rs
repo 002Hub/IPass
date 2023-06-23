@@ -58,11 +58,11 @@ fn main() {
 
 fn ask_for_pw() -> String {
     let output = rpassword::prompt_password("Please enter the master password: ").unwrap();
-    return output.replace("\n", "").replace("\r","");
+    return output.replace(|c| matches!(c, '\n' | '\r'), "");
 }
 
 fn version_help(version: &str) {
-    let mut data = version.split(".");
+    let mut data = version.split('.');
     print!("Major {} ", data.next().unwrap());
     print!("Sub {} ", data.next().unwrap());
     println!("Bugfix {}", data.next().unwrap());
@@ -203,8 +203,8 @@ fn get(args: &Vec<String>) {
     let filepath = &(ip_lib::get_ipass_folder()+name+".ipass");
     if std::path::Path::new(filepath).exists() {
         println!("Getting entry");
-        let entry: String = ip_lib::get_entry(name, ask_for_pw()).expect("could not read entry!");
-        let mut data = entry.split(";");
+        let entry: String = ip_lib::get_entry(name, ask_for_pw()).expect("Failed to get entry");
+        let mut data = entry.split(';');
         println!("Username: '{}' Password: '{}'",data.next().unwrap(),data.next().unwrap());
     } else {
         println!("No such entry!");
@@ -220,13 +220,13 @@ fn changepw(args: &Vec<String>) {
     }
     let filepath = &(ip_lib::get_ipass_folder()+&args[2]+".ipass");
     if std::path::Path::new(filepath).exists() {
-        let output: String;
+        let mut output: String = String::default();
         if args.len() != 4 {
             output = rpassword::prompt_password("Please enter the new password: ").unwrap();
         } else {
-            output = args[3].clone();
+            output.clone_from(&args[3]);
         }
-        
+
         ip_lib::edit_password(&args[2], output, ask_for_pw());
 
         println!("Changed Password of {}!", args[2]);
@@ -243,11 +243,11 @@ fn changeuser(args: &Vec<String>) {
     }
     let filepath = &(ip_lib::get_ipass_folder()+&args[2]+".ipass");
     if std::path::Path::new(filepath).exists() {
-        let output: String;
+        let mut output: String = String::default();
         if args.len() != 4 {
             output = ip_lib::prompt_answer("Enter new Username: ".to_string());
         } else {
-            output = args[3].clone();
+            output.clone_from(&args[3]);
         }
         
         ip_lib::edit_username(&args[2], output, ask_for_pw());
@@ -298,7 +298,7 @@ fn import(args: &Vec<String>) {
     //! arguments: program import {location}
     let mut location = ip_lib::get_home_folder_str();
     if args.len() == 3 {
-        location = args[2].clone();
+        location.clone_from(&args[2]);
     } else {
         if ip_lib::prompt_answer(format!("No location specified, defaulting to {} continue? [Y/n] ", location.clone())) == "n" {
             println!("Operation cancelled");
@@ -317,7 +317,7 @@ fn export(args: &Vec<String>) {
     //! arguments: program export {location}
     let mut location = ip_lib::get_home_folder_str();
     if args.len() == 3 {
-        location = args[2].clone();
+        location.clone_from(&args[2]);
     } else {
         if ip_lib::prompt_answer(format!("No location specified, defaulting to {} continue? [Y/n] ", location.clone())) == "n" {
             println!("Operation cancelled");
@@ -359,12 +359,12 @@ fn sync(args: &Vec<String>) {
 
     match arg.as_str() {
         "on" => {
-            let location: String;
+            let mut location: String = String::default();
 
             if args.len() < 4 {
                 location = ip_lib::prompt_answer_nolower("No location specified, please provide the location of the file you want to sync: ".to_string());
             } else {
-                location = args[3].clone();
+                location.clone_from(&args[3]);
             }
 
             let mut sync_file = std::fs::File::create(ip_lib::get_home_folder_str()+"/.sync.ipass").expect("could not open sync file");
